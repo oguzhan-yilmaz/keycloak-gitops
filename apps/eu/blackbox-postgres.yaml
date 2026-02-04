@@ -1,0 +1,86 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: blackbox-postgres-eu
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: prometheus-blackbox-exporter
+    targetRevision: "11.*"
+    helm:
+      releaseName: blackbox-postgres
+      valuesObject:
+        config:
+          modules:
+            tcp_postgres:
+              prober: tcp
+              timeout: 5s
+
+        serviceMonitor:
+          enabled: true
+          defaults:
+            labels:
+              release: prometheus
+            interval: 30s
+            scrapeTimeout: 30s
+
+          targets:
+            # EU -> EU
+            - name: eu-local-postgres
+              url: 172.31.7.176:5432
+              module: tcp_postgres
+              labels:
+                region: eu
+                scope: local
+                role: active
+              additionalMetricsRelabels:
+                instance: eu-local-db
+
+            # EU -> US
+            - name: eu-to-us-postgres
+              url: 172.31.27.77:5432
+              module: tcp_postgres
+              labels:
+                region: eu
+                scope: cross-region
+                role: active
+              additionalMetricsRelabels:
+                instance: eu-to-us-db
+
+        prometheusRule:
+          enabled: true
+          additionalLabels:
+            release: prometheus
+          rules:
+            - alert: PostgresTcpLatencyHigh
+              expr: probe_duration_seconds{scope="cross-region"} > 0.5
+              for: 2m
+              labels:
+                severity: warning
+              annotations:
+                summary: High cross-region PostgreSQL latency
+                description: "Latency >500ms ({{ $labels.instance }})"
+
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            add: ["NET_RAW"]
+
+        resources:
+          requests:
+            memory: 50Mi
+          limits:
+            memory: 300Mi
+
+  destination:
+    name: eu-cluster
+    namespace: blackbox
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

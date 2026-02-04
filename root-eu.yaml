@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root-app-eu
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/oguzhan-yilmaz/keycloak-gitops
+    targetRevision: main
+    path: apps/eu
+    directory:
+      recurse: true
+  destination:
+    name: eu-cluster
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
