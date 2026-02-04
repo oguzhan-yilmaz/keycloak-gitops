@@ -29,7 +29,7 @@ spec:
           targets:
             # EU -> EU
             - name: eu-local-postgres
-              url: 172.31.7.176:5432
+              url: http://34.244.247.237:5432
               module: tcp_postgres
               labels:
                 region: eu
@@ -40,7 +40,7 @@ spec:
 
             # EU -> US
             - name: eu-to-us-postgres
-              url: 172.31.27.77:5432
+              url: http://54.198.52.135:5432
               module: tcp_postgres
               labels:
                 region: eu
